@@ -1,0 +1,21 @@
+{
+  "name": "koa-wince",
+  "version": "0.1.0",
+  "description": "Koa-based JS error handling, based on Ouch",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/damianb/koa-wince.git"
+  },
+  "author": "damianb <katana@odios.us>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/damianb/koa-wince/issues"
+  },
+  "homepage": "https://github.com/damianb/koa-wince#readme",
+  "dependencies": {
+    "escape-html": "^1.0.2",
+    "jade": "^1.11.0",
+    "stack-trace": "git+https://github.com/harishanchu/node-stack-trace.git"
+  }
+}
