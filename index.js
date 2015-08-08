@@ -67,7 +67,7 @@ module.exports = function enclosure(title, pretty) {
 		try {
 			yield next
 		} catch(err) {
-			if(this.response.is('html')) {
+			if(this.request.accepts('html')) {
 				// if we've got koa-trace, might as well use it :D
 				let hasTrace = false
 				if(!!this.trace && typeof this.trace === 'function') {
