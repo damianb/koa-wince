@@ -130,7 +130,7 @@ module.exports = function enclosure(title) {
 				// quick parsing of cookies for inspection
 				let cookie = this.request.get('cookie')
 				cookie.split(';').forEach(function (cookie) {
-					var parts = cookie.split('=');
+					let parts = cookie.split('=');
 					tplCtx.tables['Cookies'][parts.shift().trim()] = decodeURI(parts.join('='));
 				})
 
