@@ -10,11 +10,15 @@
 //
 'use strict'
 
+let path = require('path')
+
 let jade = require('jade'),
-	stackTrace = require('stack-trace'),
-	_inspector = require('./inspector')
+	nl2br = require('nl2br'),
+	stackTrace = require('stack-trace')
 
 module.exports = function enclosure(title) {
+	let jadeFn = null
+
 	function frameModifier(frame) {
 		// frame modification code here
 		Object.defineProperty(frame, 'getFileLines', {
@@ -115,9 +119,16 @@ module.exports = function enclosure(title) {
           tplCtx.requestParams.cookies[parts.shift().trim()] = decodeURI(parts.join('='));
         })
 
-				// todo
-				this.body = ''
-				this.status = err.status
+				if(!jadeFn) {
+					let jadeFilename = path.join(__dirname, 'assets/views', 'wince.body.jade')
+					jadeFn = jade.compileFile(jadeFilename, {
+						pretty: true,
+						filename: jadeFilename
+					})
+				}
+
+				this.body = jadeFn(tplCtx)
+				this.status = err.status || 500
 			}
 		}
 	}
