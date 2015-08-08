@@ -1,0 +1,56 @@
+doctype html
+html(lang="en")
+	head
+		meta(charset="utf-8")
+		title= pageTitle
+		style!= asset.style.winceCSS
+	body
+		div.wince.container
+			div.stack.container
+				div(class={"frames-container": true, cf: true, empty: !frames.length})
+					for frame, i in frames
+						-
+							var className = frame.getFunctionName(), methodName = frame.getMethodName(), fileName = frame.getFileName(),
+								class = '', method = methodName, file = fileName
+							if(!!className && !!methodName) {
+								class = className.slice(0, className.length - methodName.length - 1)
+							} else if(!!className) {
+								class = className
+							}
+							if(!method) {
+								method = '<#anonymous>'
+							}
+							if(!file) {
+								file = '<#unknown>'
+							}
+						div(class={frame: true, active: (i == 0) }, id='frame-line-'+i)
+							.frame-method-info
+								span.frame-index= (frames.length - i - 1) + '.'
+								span.frame-class= class
+								span.frame-function= method
+							span.frame-file= file
+								span.frame-line= frame.getLineNumber()
+				div(class={"details-container": true, cf: true, frameEmpty: !frames.length})
+					header.exception
+						h3.title= exception.name
+						p.message= exception.message
+					// todo: framecode
+					.details
+						for data, label in tables
+							.data-table(id='sg-' + label.replace(/ /g, '-').replace(/[^\w\d\-\_]/gi, '').toLocaleLowerCase())
+								label= label
+								if data
+									table.data-table
+										thead
+											tr
+												td.data-table-k= 'Key'
+												td.data-table-v= 'Value'
+										for k, v in data
+											tr
+												td= k
+												td= (typeof value === 'object') ? util.inspect(value) : value
+								else
+									span.empty= 'empty'
+		script!= asset.script.prettify
+		script!= asset.script.zepto
+		script!= asset.script.winceJS
