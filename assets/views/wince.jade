@@ -5,52 +5,69 @@ html(lang="en")
 		title= pageTitle
 		style!= asset.style.winceCSS
 	body
-		div.wince.container
-			div.stack.container
-				div(class={"frames-container": true, cf: true, empty: !frames.length})
+		.wince.container
+			.stack.container
+				.frames-container.cf(class={empty: !frames.length})
 					for frame, i in frames
 						-
-							var className = frame.getFunctionName(), methodName = frame.getMethodName(), fileName = frame.getFileName(),
-								class = '', method = methodName, file = fileName
-							if(!!className && !!methodName) {
-								class = className.slice(0, className.length - methodName.length - 1)
-							} else if(!!className) {
-								class = className
+							var objName = frame.getFunctionName(), methodName = frame.getMethodName()
+							var className = ''
+							if(!!objName && !!methodName) {
+								className = objName.slice(0, objName.length - methodName.length - 1)
+							} else if(!!objName) {
+								className = objName
 							}
-							if(!method) {
-								method = '<#anonymous>'
-							}
-							if(!file) {
-								file = '<#unknown>'
-							}
-						div(class={frame: true, active: (i == 0) }, id='frame-line-'+i)
+							var method = methodName || '<#anonymous>'
+							var file = frame.getFileName() || '<#unknown>'
+							var line = frame.getLineNumber()
+						.frame(class={active: (i == 0)}, id='frame-line-'+i)
 							.frame-method-info
-								span.frame-index= (frames.length - i - 1) + '.'
-								span.frame-class= class
-								span.frame-function= method
-							span.frame-file= file
-								span.frame-line= frame.getLineNumber()
-				div(class={"details-container": true, cf: true, frameEmpty: !frames.length})
+								span.frame-index= (frames.length - i - 1) + '. '
+								span.frame-class= className + ' '
+								span.frame-function= method + ' '
+							span.frame-file= file + ' '
+								if line
+									span.frame-line= line
+				.details-container.cf(class={frameEmpty: !frames.length})
 					header.exception
 						h3.title= exception.name
 						p.message= exception.message
-					// todo: framecode
-					.details
-						for data, label in tables
-							.data-table(id='sg-' + label.replace(/ /g, '-').replace(/[^\w\d\-\_]/gi, '').toLocaleLowerCase())
-								label= label
-								if data
-									table.data-table
-										thead
-											tr
-												td.data-table-k= 'Key'
-												td.data-table-v= 'Value'
-										for k, v in data
-											tr
-												td= k
-												td= (typeof value === 'object') ? util.inspect(value) : value
+					.frame-code-container(class={empty: !frames.length})
+						for frame, i in frames
+							-
+								var line = frame.getLineNumber()
+								var range = frame.getFileLines(line - 8, 10)
+								var start = null
+								if(range) {
+									range = range.map(function(line) {
+										return line ? line : ' '
+									}).join("\n")
+									start = ((line - 8) >= 0) ? line - 7 : 1
+								}
+							.frame-code(class={active: (i == 0)}, id='frame-code-'+i)
+								.frame-file= 'File: '
+									strong= frame.getFileName() || '<#unknown>'
+								if line
+									pre.code-block.prettyprint(class='linenums:' + start)!= range
 								else
-									span.empty= 'empty'
-		script!= asset.script.prettify
-		script!= asset.script.zepto
-		script!= asset.script.winceJS
+									pre.code-block.prettyprint= 'Unable to locate file source.'
+					.details
+						.data-table-container#data-tables
+							for data, label in tables
+								.data-table(id='sg-' + label.replace(/ /g, '-').replace(/[^\w\d\-\_]/gi, '').toLocaleLowerCase())
+									label= label
+									if data
+										table.data-table
+											thead
+												tr
+													td.data-table-k= 'Key'
+													td.data-table-v= 'Value'
+											for v, k in data
+												tr
+													td= k
+													td= (typeof v === 'object') ? util.inspect(v) : v
+									else
+										span.empty= 'empty'
+		script(type="text/javascript")!= asset.script.prettify
+		script(type="text/javascript")!= asset.script.zepto
+		script(type="text/javascript")!= asset.script.winceJS

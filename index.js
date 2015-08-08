@@ -10,15 +10,16 @@
 //
 'use strict'
 
-let path = require('path'),
+let fs = require('fs'),
+	path = require('path'),
 	util = require('util')
 
 let jade = require('jade'),
-	nl2br = require('nl2br'),
 	stackTrace = require('stack-trace')
 
-module.exports = function enclosure(title) {
+module.exports = function enclosure(title, pretty) {
 	let jadeFn = null
+	pretty = !!pretty
 
 	function frameModifier(frame) {
 		// frame modification code here
@@ -36,11 +37,10 @@ module.exports = function enclosure(title) {
 
 				let contents = ''
 				let filePath = this.getFileName()
-				if(filePath === 'Unknown') {
+				if(filePath === 'Unknown' || !filePath) {
 					return null
 				}
 
-				// Return null if the file doesn't actually exist.
 				if (!fs.existsSync(filePath)) {
 					if (process.env.NVM_DIR && process.versions.node) {
 						filePath = path.join(process.env.NVM_DIR, 'src/node-v' + process.versions.node, 'lib', filePath);
@@ -53,9 +53,14 @@ module.exports = function enclosure(title) {
 				}
 
 				contents = fs.readFileSync(filePath, 'utf-8')
+				if(contents === null) {
+					return null
+				}
+
 				return contents.split("\n").slice(start, start + length)
 			}
 		})
+		return frame
 	}
 
 	return function *wince(next) {
@@ -74,33 +79,29 @@ module.exports = function enclosure(title) {
 				}
 
 				this.app.emit('error', err)
-
-				// chase down the error
-				let ex = _inspector(err)
-
 				let tplCtx = {
 					pageTitle: title,
 					exception: {
-						name: err.name
+						name: err.name,
 						message: err.message
 					},
-					frames: stackTrace.parse(exception).map(frameModifier)
+					frames: stackTrace.parse(err).map(frameModifier),
 					// note: this.req is the underlying request object - it appears to bypass koa
 					tables: {
 						'Server/Request Data': {
 							REMOTE_ADDR: this.request.ip,
 							//SERVER_SOFTWARE: 'NodeJS ' + process.versions.node + " " + os.type(),
-							SERVER_PROTOCOL: this.request.protocol() + "/" + this.req.httpVersion,
+							SERVER_PROTOCOL: this.request.protocol + "/" + this.req.httpVersion,
 							SCRIPT_FILE: require.main.filename,
 							REQUEST_URI: this.request.url,
 							REQUEST_METHOD: this.request.method,
-							PATH_INFO: this.require.path,
+							PATH_INFO: this.request.path,
 							QUERY_STRING: this.request.querystring,
 							HTTP_HOST: this.request.host,
 							HTTP_CONNECTION: this.request.get('connection'),
 							HTTP_CACHE_CONTROL: this.request.get('cache-control'),
 							HTTP_ACCEPT: this.request.get('accept'),
-							HTTP_USER_AGENT: this.request.get('user-agent']),
+							HTTP_USER_AGENT: this.request.get('user-agent'),
 							HTTP_DNT: this.request.get('dnt'),
 							HTTP_ACCEPT_ENCODING: this.request.get('accept-encoding'),
 							HTTP_ACCEPT_LANGUAGE: this.request.get('accept-language'),
@@ -113,15 +114,15 @@ module.exports = function enclosure(title) {
 						},
 						'Cookies': {},
 						'Environment variables': process.env
-					}
+					},
 					asset: {
 						script: {
 							zepto: fs.readFileSync(path.join(__dirname, 'assets/js', 'zepto.min.js')),
-							prettify: fs.readFileSync(path.join(__dirname, 'assets/js', 'prettify.js'))
-							winceJS: fs.readFileSync(path.join(__dirname, 'assets/js', 'wince.js'))
+							prettify: fs.readFileSync(path.join(__dirname, 'assets/js', 'prettify.min.js')),
+							winceJS: fs.readFileSync(path.join(__dirname, 'assets/js', 'wince.min.js'))
 						},
 						style: {
-							winceCSS: fs.readFileSync(path.join(__dirname, 'assets/css', 'wince.css'))
+							winceCSS: fs.readFileSync(path.join(__dirname, 'assets/css', 'wince.min.css'))
 						}
 					},
 					util: util
@@ -135,9 +136,9 @@ module.exports = function enclosure(title) {
 				})
 
 				if(!jadeFn) {
-					let jadeFilename = path.join(__dirname, 'assets/views', 'wince.body.jade')
+					let jadeFilename = path.join(__dirname, 'assets/views', 'wince.jade')
 					jadeFn = jade.compileFile(jadeFilename, {
-						pretty: true,
+						pretty: pretty,
 						filename: jadeFilename
 					})
 				}
@@ -145,7 +146,9 @@ module.exports = function enclosure(title) {
 				this.body = jadeFn(tplCtx)
 				this.status = err.status || 500
 
-				this.trace('wince-done')
+				if(hasTrace) {
+					this.trace('wince-done')
+				}
 			}
 		}
 	}
